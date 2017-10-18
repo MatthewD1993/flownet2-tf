@@ -3,6 +3,10 @@ from ..dataset_configs import FLYING_CHAIRS_DATASET_CONFIG
 from ..training_schedules import LONG_SCHEDULE
 from .flownet_s import FlowNetS
 
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 # Create a new network
 net = FlowNetS()
 

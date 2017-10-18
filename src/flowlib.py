@@ -7,7 +7,7 @@
 # Date: 6th Aug 2016
 # ==============================
 """
-import png
+# import png
 import numpy as np
 import matplotlib.colors as cl
 import matplotlib.pyplot as plt
