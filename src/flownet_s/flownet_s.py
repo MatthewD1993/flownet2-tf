@@ -50,10 +50,12 @@ class FlowNetS(Net):
                         conv5 = slim.conv2d(pad(conv4_1), stride=2, scope='conv5')
                         conv5_1 = slim.conv2d(pad(conv5), scope='conv5_1')
                     conv6 = slim.conv2d(pad(conv5_1), 1024, 3, stride=2, scope='conv6')
+                    # [None, 6, 8, 1024]
                     conv6_1 = slim.conv2d(pad(conv6), 1024, 3, scope='conv6_1')
 
                     """ START: Refinement Network """
                     with slim.arg_scope([slim.conv2d_transpose], biases_initializer=None):
+                        # [None, 6, 8, 2]
                         predict_flow6 = slim.conv2d(pad(conv6_1), 2, 3,
                                                     scope='predict_flow6',
                                                     activation_fn=None)
@@ -66,6 +68,7 @@ class FlowNetS(Net):
                                                                           activation_fn=None))
                         concat5 = tf.concat([conv5_1, deconv5, upsample_flow6to5], axis=3)
 
+                        # [None, 12, 16, 2]
                         predict_flow5 = slim.conv2d(pad(concat5), 2, 3,
                                                     scope='predict_flow5',
                                                     activation_fn=None)
@@ -78,6 +81,7 @@ class FlowNetS(Net):
                                                                           activation_fn=None))
                         concat4 = tf.concat([conv4_1, deconv4, upsample_flow5to4], axis=3)
 
+                        # [None, 24, 32, 2]
                         predict_flow4 = slim.conv2d(pad(concat4), 2, 3,
                                                     scope='predict_flow4',
                                                     activation_fn=None)
@@ -90,6 +94,7 @@ class FlowNetS(Net):
                                                                           activation_fn=None))
                         concat3 = tf.concat([conv3_1, deconv3, upsample_flow4to3], axis=3)
 
+                        # [None, 48, 64, 2]
                         predict_flow3 = slim.conv2d(pad(concat3), 2, 3,
                                                     scope='predict_flow3',
                                                     activation_fn=None)
@@ -102,6 +107,7 @@ class FlowNetS(Net):
                                                                           activation_fn=None))
                         concat2 = tf.concat([conv_2, deconv2, upsample_flow3to2], axis=3)
 
+                        # [None, 96, 128, 2]
                         predict_flow2 = slim.conv2d(pad(concat2), 2, 3,
                                                     scope='predict_flow2',
                                                     activation_fn=None)

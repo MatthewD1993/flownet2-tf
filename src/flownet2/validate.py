@@ -11,7 +11,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 net = FlowNet2()
 
 # Load a batch of data
-input_a, input_b, flow = load_val_batch(FLYING_CHAIRS_DATASET_CONFIG, 'validate', net.global_step)
+input_a, input_b, flow = load_val_batch(FLYING_CHAIRS_DATASET_CONFIG, 'train', net.global_step)
 
 # Train on the data
 net.validate(

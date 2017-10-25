@@ -15,6 +15,8 @@ def average_endpoint_error(labels, predictions):
         sqrt[sum_across_channels{(X - Y)^2}]
     """
     num_samples = predictions.shape.as_list()[0]
+    image_w = predictions.shape.as_list()[1]
+    image_h = predictions.shape.as_list()[2]
     with tf.name_scope(None, "average_endpoint_error", (predictions, labels)) as scope:
         predictions = tf.to_float(predictions)
         labels = tf.to_float(labels)
@@ -24,7 +26,7 @@ def average_endpoint_error(labels, predictions):
         # sum across channels: sum[(X - Y)^2] -> N, H, W, 1
         loss = tf.reduce_sum(squared_difference, 3, keep_dims=True)
         loss = tf.sqrt(loss)
-        return tf.reduce_sum(loss) / num_samples
+        return tf.reduce_sum(loss) / (num_samples*image_h*image_w)
 
 
 def pad(tensor, num=1):

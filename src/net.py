@@ -95,8 +95,13 @@ class Net(object):
 
         }
         predictions = self.model(inputs, training_schedule)
-        total_loss, average_epe = self.loss(flow, predictions)
+        total_loss, average_epe, gt, pd = self.loss(flow, predictions)
         tf.assert_rank(average_epe, 0)
+
+        tf.summary.histogram("gt0", gt[0, ...])
+        tf.summary.histogram("gt1", gt[1, ...])
+        tf.summary.histogram("pd0", pd[0, ...])
+        tf.summary.histogram("pd1", pd[1, ...])
 
         tf.summary.scalar('loss', total_loss)
         tf.summary.scalar('average_epe', average_epe)
@@ -145,7 +150,7 @@ class Net(object):
                     val_writer.add_summary(summary, i)
                     epe.append(a_epe)
                     t_l.append(a_total_loss)
-                    time.sleep(3)
+                    # time.sleep(3)
             except Exception, e:
                 coord.request_stop(e)
             finally:
