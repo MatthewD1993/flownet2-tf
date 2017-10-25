@@ -1,7 +1,11 @@
 import argparse
 import os
-from ..net import Mode
+from ..ori_net import Mode
 from .flownet2 import FlowNet2
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 FLAGS = None
 

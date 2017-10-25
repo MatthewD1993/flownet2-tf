@@ -1,4 +1,4 @@
-from ..net import Net, Mode
+from ..ori_net import Net, Mode
 from ..flownet_c.flownet_c import FlowNetC
 from ..flownet_s.flownet_s import FlowNetS
 from ..flow_warp import flow_warp

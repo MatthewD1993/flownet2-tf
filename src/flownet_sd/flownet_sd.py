@@ -157,4 +157,4 @@ class FlowNetSD(Net):
         loss = tf.losses.compute_weighted_loss(losses, [0.32, 0.08, 0.02, 0.01, 0.005])
 
         # Return the 'total' loss: loss fns + regularization terms defined in the model
-        return tf.losses.get_total_loss()
+        return tf.losses.get_total_loss(), loss

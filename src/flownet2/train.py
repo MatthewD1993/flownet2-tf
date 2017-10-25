@@ -3,11 +3,15 @@ from ..dataset_configs import FLYING_CHAIRS_DATASET_CONFIG
 from ..training_schedules import LONG_SCHEDULE
 from .flownet2 import FlowNet2
 
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 # Create a new network
 net = FlowNet2()
 
 # Load a batch of data
-input_a, input_b, flow = load_batch(FLYING_CHAIRS_DATASET_CONFIG, 'sample', net.global_step)
+input_a, input_b, flow = load_batch(FLYING_CHAIRS_DATASET_CONFIG, 'train', net.global_step)
 
 # Train on the data
 net.train(
@@ -18,7 +22,8 @@ net.train(
     flow=flow,
     # Load trained weights for CSS and SD parts of network
     checkpoints={
-        './checkpoints/FlowNetCSS-ft-sd/flownet-CSS-ft-sd.ckpt-0': ('FlowNet2/FlowNetCSS', 'FlowNet2'),
-        './checkpoints/FlowNetSD/flownet-SD.ckpt-0': ('FlowNet2/FlowNetSD', 'FlowNet2')
+        './checkpoints/FlowNet2/flownet-2.ckpt-0': ('FlowNet2', 'FlowNet2'),
+        # './checkpoints/FlowNetCSS-ft-sd/flownet-CSS-ft-sd.ckpt-0': ('FlowNet2/FlowNetCSS', 'FlowNet2'),
+        # './checkpoints/FlowNetSD/flownet-SD.ckpt-0': ('FlowNet2/FlowNetSD', 'FlowNet2'),
     }
 )

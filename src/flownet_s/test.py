@@ -1,6 +1,6 @@
 import argparse
 import os
-from ..net import Mode
+from ..ori_net import Mode
 from .flownet_s import FlowNetS
 
 FLAGS = None
@@ -12,7 +12,7 @@ def main():
 
     # Train on the data
     net.test(
-        checkpoint='./checkpoints/FlowNetS/flownet-S.ckpt-0',
+        checkpoint=FLAGS.model,
         input_a_path=FLAGS.input_a,
         input_b_path=FLAGS.input_b,
         out_path=FLAGS.out,
@@ -39,6 +39,12 @@ if __name__ == '__main__':
         required=True,
         help='Path to output flow result'
     )
+    parser.add_argument(
+        '--model',
+        type=str,
+        required=True,
+        help='Path to model file'
+    )
     FLAGS = parser.parse_args()
 
     # Verify arguments are valid
@@ -48,4 +54,6 @@ if __name__ == '__main__':
         raise ValueError('image_b path must exist')
     if not os.path.isdir(FLAGS.out):
         raise ValueError('out directory must exist')
+    # if not os.path.exists(FLAGS.model):
+    #     raise ValueError('model path must exist')
     main()

@@ -230,6 +230,7 @@ def load_batch(dataset_config, split_name, global_step):
         data_provider = slim.dataset_data_provider.DatasetDataProvider(
             dataset,
             num_readers=num_threads,
+            # num_epochs=1,
             common_queue_capacity=2048,
             common_queue_min=1024,
             reader_kwargs=reader_kwargs)
@@ -318,6 +319,116 @@ def load_batch(dataset_config, split_name, global_step):
                 image_bs = tf.clip_by_value(image_bs + noise_b, 0.0, 1.0)
 
                 # Perform flow augmentation using spatial parameters from data augmentation
+            flows = _preprocessing_ops.flow_augmentation(
+                flows, transforms_from_a, transforms_from_b, crop)
+
+            return tf.train.batch([image_as, image_bs, flows],
+                                  enqueue_many=True,
+                                  batch_size=dataset_config['BATCH_SIZE'],
+                                  capacity=dataset_config['BATCH_SIZE'] * 4,
+                                  num_threads=num_threads,
+                                  allow_smaller_final_batch=False)
+
+
+def load_val_batch(dataset_config, split_name, global_step):
+    num_threads = 32
+    reader_kwargs = {'options': tf.python_io.TFRecordOptions(
+        tf.python_io.TFRecordCompressionType.ZLIB)}
+
+    with tf.name_scope('load_batch'):
+        dataset = __get_dataset(dataset_config, split_name)
+        data_provider = slim.dataset_data_provider.DatasetDataProvider(
+            dataset,
+            num_readers=num_threads,
+            num_epochs=1,
+            common_queue_capacity=2048,
+            common_queue_min=1024,
+            reader_kwargs=reader_kwargs)
+        image_a, image_b, flow = data_provider.get(['image_a', 'image_b', 'flow'])
+        image_a, image_b, flow = map(tf.to_float, [image_a, image_b, flow])
+
+        if dataset_config['PREPROCESS']['scale']:
+            image_a = image_a / 255.0
+            image_b = image_b / 255.0
+
+        crop = [dataset_config['PREPROCESS']['crop_height'],
+                dataset_config['PREPROCESS']['crop_width']]
+        config_a = config_to_arrays(dataset_config['PREPROCESS']['image_a'])
+        config_b = config_to_arrays(dataset_config['PREPROCESS']['image_b'])
+
+        image_as, image_bs, flows = map(lambda x: tf.expand_dims(x, 0), [image_a, image_b, flow])
+
+        # Perform data augmentation on GPU
+        with tf.device('/cpu:0'):
+            image_as, image_bs, transforms_from_a, transforms_from_b = \
+                _preprocessing_ops.data_augmentation(image_as,
+                                                     image_bs,
+                                                     global_step,
+                                                     crop,
+                                                     config_a['name'],
+                                                     config_a['rand_type'],
+                                                     config_a['exp'],
+                                                     config_a['mean'],
+                                                     config_a['spread'],
+                                                     config_a['prob'],
+                                                     config_a['coeff_schedule'],
+                                                     config_b['name'],
+                                                     config_b['rand_type'],
+                                                     config_b['exp'],
+                                                     config_b['mean'],
+                                                     config_b['spread'],
+                                                     config_b['prob'],
+                                                     config_b['coeff_schedule'])
+
+            # noise_coeff_a = None
+            # noise_coeff_b = None
+            #
+            # # Generate and apply noise coeff for A if defined in A params
+            # if 'noise' in dataset_config['PREPROCESS']['image_a']:
+            #     discount_coeff = tf.constant(1.0)
+            #     if 'coeff_schedule_param' in dataset_config['PREPROCESS']['image_a']:
+            #         initial_coeff = dataset_config['PREPROCESS']['image_a']['coeff_schedule_param']['initial_coeff']
+            #         final_coeff = dataset_config['PREPROCESS']['image_a']['coeff_schedule_param']['final_coeff']
+            #         half_life = dataset_config['PREPROCESS']['image_a']['coeff_schedule_param']['half_life']
+            #         discount_coeff = initial_coeff + \
+            #             (final_coeff - initial_coeff) * \
+            #             (2.0 / (1.0 + exp(-1.0986 * global_step / half_life)) - 1.0)
+            #
+            #     noise_coeff_a = _generate_coeff(
+            #         dataset_config['PREPROCESS']['image_a']['noise'], discount_coeff)
+            #     noise_a = tf.random_normal(shape=tf.shape(image_as),
+            #                                mean=0.0, stddev=noise_coeff_a,
+            #                                dtype=tf.float32)
+            #     image_as = tf.clip_by_value(image_as + noise_a, 0.0, 1.0)
+            #
+            # # Generate noise coeff for B if defined in B params
+            # if 'noise' in dataset_config['PREPROCESS']['image_b']:
+            #     discount_coeff = tf.constant(1.0)
+            #     if 'coeff_schedule_param' in dataset_config['PREPROCESS']['image_b']:
+            #         initial_coeff = dataset_config['PREPROCESS']['image_b']['coeff_schedule_param']['initial_coeff']
+            #         final_coeff = dataset_config['PREPROCESS']['image_b']['coeff_schedule_param']['final_coeff']
+            #         half_life = dataset_config['PREPROCESS']['image_b']['coeff_schedule_param']['half_life']
+            #         discount_coeff = initial_coeff + \
+            #             (final_coeff - initial_coeff) * \
+            #             (2.0 / (1.0 + exp(-1.0986 * global_step / half_life)) - 1.0)
+            #     noise_coeff_b = _generate_coeff(
+            #         dataset_config['PREPROCESS']['image_b']['noise'], discount_coeff)
+            #
+            # # Combine coeff from a with coeff from b
+            # if noise_coeff_a is not None:
+            #     if noise_coeff_b is not None:
+            #         noise_coeff_b = noise_coeff_a * noise_coeff_b
+            #     else:
+            #         noise_coeff_b = noise_coeff_a
+            #
+            # # Add noise to B if needed
+            # if noise_coeff_b is not None:
+            #     noise_b = tf.random_normal(shape=tf.shape(image_bs),
+            #                                mean=0.0, stddev=noise_coeff_b,
+            #                                dtype=tf.float32)
+            #     image_bs = tf.clip_by_value(image_bs + noise_b, 0.0, 1.0)
+            #
+            #     # Perform flow augmentation using spatial parameters from data augmentation
             flows = _preprocessing_ops.flow_augmentation(
                 flows, transforms_from_a, transforms_from_b, crop)
 

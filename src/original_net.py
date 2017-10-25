@@ -7,9 +7,6 @@ import numpy as np
 from scipy.misc import imread, imsave
 import uuid
 from .training_schedules import LONG_SCHEDULE
-from tqdm import tqdm
-import time
-# from tensorflow.python import debug as tf_debug
 slim = tf.contrib.slim
 
 
@@ -81,102 +78,6 @@ class Net(object):
                 full_out_path = os.path.join(out_path, unique_name + '.flo')
                 write_flow(pred_flow, full_out_path)
 
-    def validate(self, log_dir, training_schedule, input_a, input_b, flow, checkpoints):
-
-        init_op = tf.group(tf.global_variables_initializer(),
-                           tf.local_variables_initializer())
-
-        tf.summary.image("image_a", input_a, max_outputs=2)
-        tf.summary.image("image_b", input_b, max_outputs=2)
-
-        inputs = {
-            'input_a': input_a,
-            'input_b': input_b,
-
-        }
-        predictions = self.model(inputs, training_schedule)
-        total_loss, average_epe = self.loss(flow, predictions)
-        tf.assert_rank(average_epe, 0)
-
-        tf.summary.scalar('loss', total_loss)
-        tf.summary.scalar('average_epe', average_epe)
-
-        if 'flow' in predictions:
-            pred_flow_0 = predictions['flow'][0, :, :, :]
-            pred_flow_0 = tf.py_func(flow_to_image, [pred_flow_0], tf.uint8)
-            pred_flow_1 = predictions['flow'][1, :, :, :]
-            pred_flow_1 = tf.py_func(flow_to_image, [pred_flow_1], tf.uint8)
-            pred_flow_img = tf.stack([pred_flow_0, pred_flow_1], 0)
-            tf.summary.image('pred_flow', pred_flow_img, max_outputs=2)
-
-        true_flow_0 = flow[0, :, :, :]
-        true_flow_0 = tf.py_func(flow_to_image, [true_flow_0], tf.uint8)
-        true_flow_1 = flow[1, :, :, :]
-        true_flow_1 = tf.py_func(flow_to_image, [true_flow_1], tf.uint8)
-        true_flow_img = tf.stack([true_flow_0, true_flow_1], 0)
-        tf.summary.image('true_flow', true_flow_img, max_outputs=2)
-
-        merged = tf.summary.merge_all()
-
-        saver = tf.train.Saver()
-
-        with tf.Session() as sess:
-            sess.run(init_op)
-            saver.restore(sess, checkpoints)
-            # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-
-            val_writer = tf.summary.FileWriter(log_dir + '/val_summary', sess.graph)
-
-            coord = tf.train.Coordinator()
-
-            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
-            # print("check1")
-            self.global_step = self.global_step+1
-
-            epe = []
-            t_l = []
-            try:
-                # i = 0
-                for i in tqdm(range(80)):
-                    # print(i)
-                    # i = i+1
-                    summary, a_total_loss, a_epe = sess.run([merged, total_loss, average_epe])
-                    val_writer.add_summary(summary, i)
-                    epe.append(a_epe)
-                    t_l.append(a_total_loss)
-                    time.sleep(3)
-            except Exception, e:
-                coord.request_stop(e)
-            finally:
-                coord.request_stop()
-                coord.join(threads)
-
-        print('Average total loss is', sum(t_l)/80.)
-        print('Validation average end points error is', sum(epe)/80.)
-
-
-
-        # for (checkpoint_path, (scope, new_scope)) in checkpoints.iteritems():
-        #     variables_to_restore = slim.get_variables(scope=scope)
-        #
-        #     for var in variables_to_restore[:20]:
-        #         print (var.op.name)
-        #         print (var.op.name.split(new_scope + '/')[1])
-        #
-        #     # renamed_variables = variables_to_restore
-        #     if scope == 'FlowNet2' or 'FlowNetS':
-        #         renamed_variables = variables_to_restore
-        #     else:
-        #         renamed_variables = {
-        #             var.op.name.split(new_scope + '/')[1]: var
-        #             for var in variables_to_restore
-        #         }
-        #
-        #     restorer = tf.train.Saver(renamed_variables)
-        #     with tf.Session() as sess:
-        #         restorer.restore(sess, checkpoint_path)
-
     def train(self, log_dir, training_schedule, input_a, input_b, flow, checkpoints=None):
         tf.summary.image("image_a", input_a, max_outputs=2)
         tf.summary.image("image_b", input_b, max_outputs=2)
@@ -196,11 +97,8 @@ class Net(object):
             'input_b': input_b,
         }
         predictions = self.model(inputs, training_schedule)
-        total_loss, average_epe = self.loss(flow, predictions)
-        tf.assert_rank(average_epe, 0)
-
+        total_loss = self.loss(flow, predictions)
         tf.summary.scalar('loss', total_loss)
-        tf.summary.scalar(('average_epe', average_epe))
 
         if checkpoints:
             for (checkpoint_path, (scope, new_scope)) in checkpoints.iteritems():
@@ -211,13 +109,14 @@ class Net(object):
                     print (var.op.name.split(new_scope + '/')[1])
 
                 # renamed_variables = variables_to_restore
-                if scope == 'FlowNet2' or 'FlowNetS':
-                    renamed_variables = variables_to_restore
-                else:
-                    renamed_variables = {
-                        var.op.name.split(new_scope + '/')[1]: var
-                        for var in variables_to_restore
-                    }
+
+
+
+
+                renamed_variables = {
+                    var.op.name.split(new_scope + '/')[1]: var
+                    for var in variables_to_restore
+                }
 
                 restorer = tf.train.Saver(renamed_variables)
                 with tf.Session() as sess:
@@ -264,6 +163,6 @@ class Net(object):
                 log_dir,
                 # session_config=tf.ConfigProto(allow_soft_placement=True),
                 global_step=self.global_step,
-                save_summaries_secs=30,
+                save_summaries_secs=60,
                 number_of_steps=training_schedule['max_iter']
             )

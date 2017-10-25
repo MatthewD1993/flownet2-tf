@@ -1,6 +1,6 @@
 import argparse
 import os
-from ..net import Mode
+from ..ori_net import Mode
 from .flownet_c import FlowNetC
 
 FLAGS = None

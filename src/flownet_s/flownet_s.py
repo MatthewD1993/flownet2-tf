@@ -23,7 +23,10 @@ class FlowNetS(Net):
                                            inputs['flow'],
                                            inputs['brightness_error']], axis=3)
             else:
+                for k,v in inputs.iteritems():
+                    print(k," shape is:", v.shape)
                 concat_inputs = tf.concat([inputs['input_a'], inputs['input_b']], axis=3)
+                # print ("concat_inputs shape is", concat_inputs.shape)
             with slim.arg_scope([slim.conv2d, slim.conv2d_transpose],
                                 # Only backprop this network if trainable
                                 trainable=trainable,
@@ -158,4 +161,4 @@ class FlowNetS(Net):
         loss = tf.losses.compute_weighted_loss(losses, [0.32, 0.08, 0.02, 0.01, 0.005])
 
         # Return the 'total' loss: loss fns + regularization terms defined in the model
-        return tf.losses.get_total_loss()
+        return tf.losses.get_total_loss(), loss

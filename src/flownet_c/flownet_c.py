@@ -1,4 +1,4 @@
-from ..net import Net, Mode
+from ..ori_net import Net, Mode
 from ..utils import LeakyReLU, average_endpoint_error, pad, antipad
 from ..correlation import correlation
 from ..downsample import downsample

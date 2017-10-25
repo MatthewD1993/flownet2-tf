@@ -113,4 +113,4 @@ class FlowNet2(Net):
         tf.losses.add_loss(loss)
 
         # Return the 'total' loss: loss fns + regularization terms defined in the model
-        return tf.losses.get_total_loss()
+        return tf.losses.get_total_loss(), loss
