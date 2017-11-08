@@ -23,8 +23,8 @@ class FlowNetS(Net):
                                            inputs['flow'],
                                            inputs['brightness_error']], axis=3)
             else:
-                for k,v in inputs.iteritems():
-                    print(k," shape is:", v.shape)
+                # for k,v in inputs.iteritems():
+                #     print(k," shape is:", v.shape)
                 concat_inputs = tf.concat([inputs['input_a'], inputs['input_b']], axis=3)
                 # print ("concat_inputs shape is", concat_inputs.shape)
             with slim.arg_scope([slim.conv2d, slim.conv2d_transpose],
@@ -55,7 +55,7 @@ class FlowNetS(Net):
 
                     """ START: Refinement Network """
                     with slim.arg_scope([slim.conv2d_transpose], biases_initializer=None):
-                        # [None, 6, 8, 2]
+                        # [None, 5, 7, 2]
                         predict_flow6 = slim.conv2d(pad(conv6_1), 2, 3,
                                                     scope='predict_flow6',
                                                     activation_fn=None)
@@ -107,7 +107,7 @@ class FlowNetS(Net):
                                                                           activation_fn=None))
                         concat2 = tf.concat([conv_2, deconv2, upsample_flow3to2], axis=3)
 
-                        # [None, 96, 128, 2]
+                        # [None, 80, 112, 2]
                         predict_flow2 = slim.conv2d(pad(concat2), 2, 3,
                                                     scope='predict_flow2',
                                                     activation_fn=None)
@@ -163,6 +163,9 @@ class FlowNetS(Net):
         size = [predict_flow2.shape[1], predict_flow2.shape[2]]
         downsampled_flow2 = downsample(flow, size)
         losses.append(average_endpoint_error(downsampled_flow2, predict_flow2))
+
+        # To test the output size as I expected.
+        tf.assert_equal(downsampled_flow2.shape.as_list(), [8, 80, 112, 2])
 
         loss = tf.losses.compute_weighted_loss(losses, [0.32, 0.08, 0.02, 0.01, 0.005])
 

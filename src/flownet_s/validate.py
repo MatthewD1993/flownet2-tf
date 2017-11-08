@@ -1,10 +1,10 @@
-from ..dataloader import *
-from ..dataset_configs_S import FLYING_CHAIRS_DATASET_CONFIG
-from ..training_schedules_S import LONG_SCHEDULE
-from .flownet_s import FlowNetS
-
-
 import os
+
+from src.flownet_s.dataset_configs_S import FLYING_CHAIRS_DATASET_CONFIG
+from src.flownet_s.training_schedules_S import LONG_SCHEDULE
+from .flownet_s import FlowNetS
+from ..dataloader import *
+
 os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 checkpoint_path = "./checkpoints/FlowNetS/flownet-S.ckpt-0"

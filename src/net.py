@@ -82,7 +82,16 @@ class Net(object):
                 write_flow(pred_flow, full_out_path)
 
     def validate(self, log_dir, training_schedule, input_a, input_b, flow, checkpoints):
-
+        '''
+        This code can be used to test the performance of trained model.,,,
+        :param log_dir:
+        :param training_schedule:
+        :param input_a:
+        :param input_b:
+        :param flow:
+        :param checkpoints:
+        :return:
+        '''
         init_op = tf.group(tf.global_variables_initializer(),
                            tf.local_variables_initializer())
 
@@ -95,13 +104,8 @@ class Net(object):
 
         }
         predictions = self.model(inputs, training_schedule)
-        total_loss, average_epe, gt, pd = self.loss(flow, predictions)
+        total_loss, average_epe = self.loss(flow, predictions)
         tf.assert_rank(average_epe, 0)
-
-        tf.summary.histogram("gt0", gt[0, ...])
-        tf.summary.histogram("gt1", gt[1, ...])
-        tf.summary.histogram("pd0", pd[0, ...])
-        tf.summary.histogram("pd1", pd[1, ...])
 
         tf.summary.scalar('loss', total_loss)
         tf.summary.scalar('average_epe', average_epe)
@@ -205,7 +209,7 @@ class Net(object):
         tf.assert_rank(average_epe, 0)
 
         tf.summary.scalar('loss', total_loss)
-        tf.summary.scalar(('average_epe', average_epe))
+        tf.summary.scalar('average_epe', average_epe)
 
         if checkpoints:
             for (checkpoint_path, (scope, new_scope)) in checkpoints.iteritems():
@@ -216,7 +220,8 @@ class Net(object):
                     print (var.op.name.split(new_scope + '/')[1])
 
                 # renamed_variables = variables_to_restore
-                if scope == 'FlowNet2' or 'FlowNetS':
+                # if scope == 'FlowNet2' or 'FlowNetS':
+                if scope == 'FlowNet2':
                     renamed_variables = variables_to_restore
                 else:
                     renamed_variables = {
@@ -264,11 +269,14 @@ class Net(object):
                     }
                 )
         else:
+            config = tf.ConfigProto(allow_soft_placement=True)
+            config.gpu_options.allow_growth = True
+
             slim.learning.train(
                 train_op,
                 log_dir,
-                # session_config=tf.ConfigProto(allow_soft_placement=True),
+                session_config=config,
                 global_step=self.global_step,
-                save_summaries_secs=30,
+                save_summaries_secs=60,
                 number_of_steps=training_schedule['max_iter']
             )
