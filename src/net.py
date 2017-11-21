@@ -9,7 +9,6 @@ import uuid
 from .training_schedules import LONG_SCHEDULE
 from tqdm import tqdm
 import time
-# from tensorflow.python import debug as tf_debug
 slim = tf.contrib.slim
 
 
@@ -21,8 +20,17 @@ class Mode(Enum):
 class Net(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, mode=Mode.TRAIN, debug=False):
-        self.global_step = slim.get_or_create_global_step()
+    def __init__(self, mode=Mode.TRAIN, debug=False, global_step=None):
+        # self.global_step = slim.get_or_create_global_step()
+        # with tf.variable_scope("Global", reuse=True) as scope:
+        #     self.global_step = tf.get_variable('global_step', shape=(), dtype=tf.int64, trainable=False)
+        # print(self.global_step)
+        if global_step is not None:
+            self.global_step = global_step
+        else:
+            self.global_step = slim.get_or_create_global_step()
+        print(self.global_step)
+
         self.mode = mode
         self.debug = debug
 
@@ -82,7 +90,7 @@ class Net(object):
                 write_flow(pred_flow, full_out_path)
 
     def validate(self, log_dir, training_schedule, input_a, input_b, flow, checkpoints):
-        '''
+        """
         This code can be used to test the performance of trained model.,,,
         :param log_dir:
         :param training_schedule:
@@ -91,9 +99,7 @@ class Net(object):
         :param flow:
         :param checkpoints:
         :return:
-        '''
-        init_op = tf.group(tf.global_variables_initializer(),
-                           tf.local_variables_initializer())
+        """
 
         tf.summary.image("image_a", input_a, max_outputs=2)
         tf.summary.image("image_b", input_b, max_outputs=2)
@@ -105,7 +111,7 @@ class Net(object):
         }
         predictions = self.model(inputs, training_schedule)
         total_loss, average_epe = self.loss(flow, predictions)
-        tf.assert_rank(average_epe, 0)
+        tf.assert_rank(average_epe, 0), "Average EPE should be rank 0, float point number."
 
         tf.summary.scalar('loss', total_loss)
         tf.summary.scalar('average_epe', average_epe)
@@ -215,13 +221,13 @@ class Net(object):
             for (checkpoint_path, (scope, new_scope)) in checkpoints.iteritems():
                 variables_to_restore = slim.get_variables(scope=scope)
 
-                for var in variables_to_restore[:20]:
-                    print (var.op.name)
-                    print (var.op.name.split(new_scope + '/')[1])
+                # for var in variables_to_restore[:20]:
+                #     print (var.op.name)
+                #     print (var.op.name.split(new_scope + '/')[1])
 
                 # renamed_variables = variables_to_restore
                 # if scope == 'FlowNet2' or 'FlowNetS':
-                if scope == 'FlowNet2':
+                if scope == new_scope:
                     renamed_variables = variables_to_restore
                 else:
                     renamed_variables = {
@@ -277,6 +283,119 @@ class Net(object):
                 log_dir,
                 session_config=config,
                 global_step=self.global_step,
-                save_summaries_secs=60,
+                save_summaries_secs=12,
+                save_interval_secs=60,
+                number_of_steps=training_schedule['max_iter']
+            )
+
+    def restore_train(self, log_dir, training_schedule, input_a, input_b, flow, checkpoints=None,
+                      set_global_step=False):
+        tf.summary.image("image_a", input_a, max_outputs=2)
+        tf.summary.image("image_b", input_b, max_outputs=2)
+
+        inputs = {
+            'input_a': input_a,
+            'input_b': input_b,
+        }
+
+        predictions = self.model(inputs, training_schedule)
+        total_loss, average_epe = self.loss(flow, predictions)
+        # tf.assert_rank(average_epe, 0)
+
+        # Show the generated flow in TensorBoard
+        if 'flow' in predictions:
+            pred_flow_0 = predictions['flow'][0, :, :, :]
+            pred_flow_0 = tf.py_func(flow_to_image, [pred_flow_0], tf.uint8)
+            pred_flow_1 = predictions['flow'][1, :, :, :]
+            pred_flow_1 = tf.py_func(flow_to_image, [pred_flow_1], tf.uint8)
+            pred_flow_img = tf.stack([pred_flow_0, pred_flow_1], 0)
+            tf.summary.image('pred_flow', pred_flow_img, max_outputs=2)
+
+        true_flow_0 = flow[0, :, :, :]
+        true_flow_0 = tf.py_func(flow_to_image, [true_flow_0], tf.uint8)
+        true_flow_1 = flow[1, :, :, :]
+        true_flow_1 = tf.py_func(flow_to_image, [true_flow_1], tf.uint8)
+        true_flow_img = tf.stack([true_flow_0, true_flow_1], 0)
+        tf.summary.image('true_flow', true_flow_img, max_outputs=2)
+
+        self.learning_rate = tf.train.piecewise_constant(
+            self.global_step,
+            [tf.cast(v, tf.int64) for v in training_schedule['step_values']],
+            training_schedule['learning_rates'])
+
+        tf.summary.scalar('loss', total_loss)
+        tf.summary.scalar('learning_rate', self.learning_rate)
+
+        # with tf.Session() as sess:
+        #     print("Global step @1 is", sess.run(self.global_step))
+        #     print("Learning rate is: ", sess.run(self.learning_rate))
+
+        if set_global_step:
+            variables_to_restore = slim.get_variables_to_restore(exclude=['global_step'])
+        else:
+            variables_to_restore = slim.get_variables_to_restore()
+        print('#########################')
+        # variables_to_restore = slim.get_variables()
+        for v in variables_to_restore:
+            print(v)
+
+        optimizer = tf.train.AdamOptimizer(
+            self.learning_rate,
+            training_schedule['momentum'],
+            training_schedule['momentum2'])
+
+        print('#########################')
+
+        for v in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES):
+            print(v)
+
+        if checkpoints is None:
+            raise Exception('Checkpoint file not given.')
+
+        train_op = slim.learning.create_train_op(
+            total_loss,
+            optimizer,
+            summarize_gradients=True)
+
+        init_assign_op, init_feed_dict = slim.assign_from_checkpoint(checkpoints, variables_to_restore)
+        print('#########################')
+        print(init_assign_op)
+        print('#########################')
+
+        for k,v in init_feed_dict.items():
+            if k.name =='placeholder/global_step:0':
+                print (k,v)
+        print('#########################')
+        # print(init_feed_dict['placeholder/global_step:0'])
+
+        def InitAssignFn(sess):
+            sess.run(init_assign_op, init_feed_dict)
+
+        if self.debug:
+            with tf.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                tf.train.start_queue_runners(sess)
+                slim.learning.train_step(
+                    sess,
+                    train_op,
+                    self.global_step,
+                    {
+                        'should_trace': tf.constant(1),
+                        'should_log': tf.constant(1),
+                        'logdir': log_dir + '/debug',
+                    }
+                )
+        else:
+            config = tf.ConfigProto(allow_soft_placement=True)
+            config.gpu_options.allow_growth = True
+
+            slim.learning.train(
+                train_op,
+                log_dir,
+                init_fn=InitAssignFn,
+                session_config=config,
+                global_step=self.global_step,
+                save_summaries_secs=12,
+                save_interval_secs=60,
                 number_of_steps=training_schedule['max_iter']
             )
