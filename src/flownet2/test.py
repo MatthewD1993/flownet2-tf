@@ -1,13 +1,15 @@
 import argparse
-import os
-from ..ori_net import Mode
+# import os
+from ..net import Mode
 from .flownet2 import FlowNet2
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 FLAGS = None
+checkpoint_path = './checkpoints/FlowNet2/flownet-2.ckpt-0'
+# checkpoint_path = './logs/flownet2_lre-8/model.ckpt-0',
 
 
 def main():
@@ -16,7 +18,7 @@ def main():
 
     # Train on the data
     net.test(
-        checkpoint='./checkpoints/FlowNet2/flownet-2.ckpt-0',
+        checkpoint=checkpoint_path,
         input_a_path=FLAGS.input_a,
         input_b_path=FLAGS.input_b,
         out_path=FLAGS.out,

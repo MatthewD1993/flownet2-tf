@@ -7,4 +7,15 @@ __pycache__/
 checkpoints/
 !checkpoints/download.sh
 !checkpoints/README.md
+!data/tfrecords/
 logs/
+
+.idea/
+css-ft-sd.png
+data/samples/10375_img1.ppm
+data/samples/10375_img2.ppm
+data/samples/11111_img1.ppm
+data/samples/11111_img2.ppm
+flow-2c0a2f4e-1787-4a07-b6dd-a92f0cd05951.png
+flownet2.png
+sd.png

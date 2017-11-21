@@ -3,8 +3,10 @@ import os
 from ..ori_net import Mode
 from .flownet_s import FlowNetS
 
-FLAGS = None
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
+FLAGS = None
 
 def main():
     # Create a new network

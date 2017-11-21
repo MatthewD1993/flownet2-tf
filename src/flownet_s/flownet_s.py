@@ -8,8 +8,8 @@ slim = tf.contrib.slim
 
 class FlowNetS(Net):
 
-    def __init__(self, mode=Mode.TRAIN, debug=False):
-        super(FlowNetS, self).__init__(mode=mode, debug=debug)
+    def __init__(self, mode=Mode.TRAIN, debug=False, global_step=None):
+        super(FlowNetS, self).__init__(mode=mode, debug=debug, global_step=global_step)
 
     def model(self, inputs, training_schedule, trainable=True):
         _, height, width, _ = inputs['input_a'].shape.as_list()
@@ -165,7 +165,7 @@ class FlowNetS(Net):
         losses.append(average_endpoint_error(downsampled_flow2, predict_flow2))
 
         # To test the output size as I expected.
-        tf.assert_equal(downsampled_flow2.shape.as_list(), [8, 80, 112, 2])
+        # tf.assert_equal(downsampled_flow2.shape.as_list(), [16, 80, 112, 2])
 
         loss = tf.losses.compute_weighted_loss(losses, [0.32, 0.08, 0.02, 0.01, 0.005])
 

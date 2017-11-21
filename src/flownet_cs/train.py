@@ -19,3 +19,5 @@ net.train(
     # Load trained weights for C part of network
     checkpoints={'./checkpoints/FlowNetC/flownet-C.ckpt-0': ('FlowNetCS/FlowNetC', 'FlowNetCS')}
 )
+
+
