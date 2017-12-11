@@ -46,6 +46,8 @@ def visualize_flow(flow, mode='Y'):
     if mode == 'Y':
         # Ccbcr color wheel
         img = flow_to_image(flow)
+        fig = plt.figure()
+        print(np.ptp(img))
         plt.imshow(img)
         plt.show()
     elif mode == 'RGB':
@@ -95,8 +97,7 @@ def read_flow(filename):
     else:
         w = np.fromfile(f, np.int32, count=1)
         h = np.fromfile(f, np.int32, count=1)
-        print
-        "Reading %d x %d flo file" % (h, w)
+        print "Reading %d x %d flo file" % (h, w)
         data2d = np.fromfile(f, np.float32, count=2 * w * h)
         # reshape data into 3D array (columns, rows, channels)
         data2d = np.resize(data2d, (h[0], w[0], 2))
@@ -183,7 +184,8 @@ def segment_flow(flow):
     return seg
 
 
-def flow_error(tu, tv, u, v):
+# def flow_error(tu, tv, u, v):
+def flow_error(flow, prediction):
     """
     Calculate average end point error
     :param tu: ground-truth horizontal flow map
@@ -199,11 +201,11 @@ def flow_error(tu, tv, u, v):
     su = u[bord+1:end-bord,bord+1:end-bord]
     sv = v[bord+1:end-bord,bord+1:end-bord]
     '''
-    stu = tu[:]
-    stv = tv[:]
-    su = u[:]
-    sv = v[:]
-
+    stu = flow[:, :, :, 0]
+    stv = flow[:, :, :, 0]
+    su = prediction[:, :, :, 0]
+    sv = prediction[:, :, :, 1]
+    print("stu shape:", stu.shape)
     idxUnknow = (abs(stu) > UNKNOWN_FLOW_THRESH) | (abs(stv) > UNKNOWN_FLOW_THRESH)
     stu[idxUnknow] = 0
     stv[idxUnknow] = 0
@@ -211,17 +213,17 @@ def flow_error(tu, tv, u, v):
     sv[idxUnknow] = 0
 
     ind2 = [(np.absolute(stu) > smallflow) | (np.absolute(stv) > smallflow)]
-    index_su = su[ind2]
-    index_sv = sv[ind2]
-    an = 1.0 / np.sqrt(index_su ** 2 + index_sv ** 2 + 1)
-    un = index_su * an
-    vn = index_sv * an
-
-    index_stu = stu[ind2]
-    index_stv = stv[ind2]
-    tn = 1.0 / np.sqrt(index_stu ** 2 + index_stv ** 2 + 1)
-    tun = index_stu * tn
-    tvn = index_stv * tn
+    # index_su = su[ind2]
+    # index_sv = sv[ind2]
+    # an = 1.0 / np.sqrt(index_su ** 2 + index_sv ** 2 + 1)
+    # un = index_su * an
+    # vn = index_sv * an
+    #
+    # index_stu = stu[ind2]
+    # index_stv = stv[ind2]
+    # tn = 1.0 / np.sqrt(index_stu ** 2 + index_stv ** 2 + 1)
+    # tun = index_stu * tn
+    # tvn = index_stv * tn
 
     '''
     angle = un * tun + vn * tvn + (an * tn)

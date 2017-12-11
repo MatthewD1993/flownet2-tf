@@ -14,9 +14,22 @@ def my_average_endpoint_error(labels, predictions):
     Given labels and predictions of size (N, H, W, 2), calculates average endpoint error:
         sqrt[sum_across_channels{(X - Y)^2}]
     """
-    num_samples = predictions.shape.as_list()[0]
-    image_w = predictions.shape.as_list()[1]
-    image_h = predictions.shape.as_list()[2]
+    smallflow = 0.0
+    stu = flow[:, :, :, 0]
+    stv = flow[:, :, :, 0]
+    su = prediction[:, :, :, 0]
+    sv = prediction[:, :, :, 1]
+
+    idxUnknow = (abs(stu) > UNKNOWN_FLOW_THRESH) | (abs(stv) > UNKNOWN_FLOW_THRESH)
+    stu[idxUnknow] = 0
+    stv[idxUnknow] = 0
+    su[idxUnknow] = 0
+    sv[idxUnknow] = 0
+
+    ind2 = [(np.absolute(stu) > smallflow) | (np.absolute(stv) > smallflow)]
+
+    # num_samples = predictions.shape.as_list()[0]
+
     with tf.name_scope(None, "average_endpoint_error", (predictions, labels)) as scope:
         predictions = tf.to_float(predictions)
         labels = tf.to_float(labels)

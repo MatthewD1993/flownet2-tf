@@ -1,5 +1,4 @@
 import os
-
 from src.flownet_s.dataset_configs_S import FLYING_CHAIRS_DATASET_CONFIG
 from src.flownet_s.training_schedules_S import LONG_SCHEDULE
 from .flownet_s import FlowNetS
@@ -9,7 +8,7 @@ os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 checkpoint_path = "./checkpoints/FlowNetS/flownet-S.ckpt-0"
-
+# checkpoint_path = "./logs/flownet_s/model.ckpt-1200000"
 
 # Create a new network
 net = FlowNetS()
@@ -27,3 +26,6 @@ net.validate(
     checkpoints=checkpoint_path
     # checkpoints={checkpoint_path : ('FlowNetS', 'FlowNetS'),}
 )
+
+
+
